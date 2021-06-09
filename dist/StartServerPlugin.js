@@ -1,21 +1,28 @@
-import cluster from 'cluster';
+'use strict';
 
-export default class StartServerPlugin {
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _cluster = require('cluster');
+
+var _cluster2 = _interopRequireDefault(_cluster);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+class StartServerPlugin {
   constructor(options) {
     if (options == null) {
       options = {};
     }
     if (typeof options === 'string') {
-      options = {name: options};
+      options = { name: options };
     }
-    this.options = Object.assign(
-      {
-        signal: false,
-        // Only listen on keyboard in development, so the server doesn't hang forever
-        keyboard: process.env.NODE_ENV === 'development',
-      },
-      options
-    );
+    this.options = Object.assign({
+      signal: false,
+      // Only listen on keyboard in development, so the server doesn't hang forever
+      keyboard: process.env.NODE_ENV === 'development'
+    }, options);
     this.afterEmit = this.afterEmit.bind(this);
     this.apply = this.apply.bind(this);
     this.startServer = this.startServer.bind(this);
@@ -42,14 +49,16 @@ export default class StartServerPlugin {
   }
 
   _getExecArgv() {
-    const {options} = this;
+    const options = this.options;
+
     const execArgv = (options.nodeArgs || []).concat(process.execArgv);
     return execArgv;
   }
 
   _getArgs() {
-    const { options } = this;
-    const argv = (options.args || []);
+    const options = this.options;
+
+    const argv = options.args || [];
     return argv;
   }
 
@@ -64,8 +73,9 @@ export default class StartServerPlugin {
   }
 
   _getSignal() {
-    const {signal} = this.options;
+    const signal = this.options.signal;
     // allow users to disable sending a signal by setting to `false`...
+
     if (signal === false) return;
     if (signal === true) return 'SIGUSR2';
     return signal;
@@ -86,7 +96,7 @@ export default class StartServerPlugin {
   apply(compiler) {
     // Use the Webpack 4 Hooks API when possible.
     if (compiler.hooks) {
-      const plugin = {name: 'StartServerPlugin'};
+      const plugin = { name: 'StartServerPlugin' };
 
       compiler.hooks.afterEmit.tapAsync(plugin, this.afterEmit);
     } else {
@@ -95,28 +105,22 @@ export default class StartServerPlugin {
   }
 
   startServer(compilation) {
-    const {options} = this;
+    const options = this.options;
+
     let name;
     const names = Object.keys(compilation.assets);
     if (options.name) {
       name = options.name;
       if (!compilation.assets[name]) {
-        console.error(
-          'Entry ' + name + ' not found. Try one of: ' + names.join(' ')
-        );
+        console.error('Entry ' + name + ' not found. Try one of: ' + names.join(' '));
       }
     } else {
       name = names[0];
       if (names.length > 1) {
-        console.log(
-          'More than one entry built, selected ' +
-            name +
-            '. All names: ' +
-            names.join(' ')
-        );
+        console.log('More than one entry built, selected ' + name + '. All names: ' + names.join(' '));
       }
     }
-    this._entryPoint = [compilation.compiler.options.output.path,name].join('/');
+    this._entryPoint = [compilation.compiler.options.output.path, name].join('/');
 
     this._startServer(worker => {
       this.worker = worker;
@@ -131,20 +135,21 @@ export default class StartServerPlugin {
     const clusterOptions = {
       exec: this._entryPoint,
       execArgv,
-      args,
+      args
     };
 
     if (inspectPort) {
       clusterOptions.inspectPort = inspectPort;
     }
-    cluster.setupMaster(clusterOptions);
+    _cluster2.default.setupMaster(clusterOptions);
 
-    cluster.on('online', worker => {
+    _cluster2.default.on('online', worker => {
       callback(worker);
     });
 
-    cluster.fork();
+    _cluster2.default.fork();
   }
 }
 
+exports.default = StartServerPlugin;
 module.exports = StartServerPlugin;
